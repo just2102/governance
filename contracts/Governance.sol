@@ -118,11 +118,12 @@ contract Governance {
     }
 
     function isSuccessByQuorum(uint forVotes, uint againstVotes, uint abstainVotes) private pure returns (bool) {
-        if (forVotes + abstainVotes > againstVotes) {
-            return true;
-        } else {
-            return false;
-        }
+        uint totalValidVotes = forVotes + againstVotes;
+        if (totalValidVotes == 0) return false;
+
+        uint forVotePercentage = (forVotes * 100) / totalValidVotes;
+
+        return forVotePercentage > 70;
     }
 
 }
