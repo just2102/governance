@@ -13,6 +13,14 @@ contract Governance {
         token = _token;
     }
 
+    enum ProposalState {
+        Pending,
+        Active,
+        Succeeded,
+        Defeated,
+        Executed
+    }
+
     struct ProposalVote {
         uint againstVotes;
         uint forVotes;
@@ -27,6 +35,7 @@ contract Governance {
         bool executed;
     }
     mapping (bytes32 => Proposal) public proposals;
+    mapping (bytes32 => ProposalVote) public proposalVotes;
 
     event Proposed(address indexed proposer, bytes32 indexed proposalId);    
     function propose(
@@ -39,6 +48,8 @@ contract Governance {
         require(token.balanceOf(msg.sender) > 0, "You must have tokens to propose");
 
         bytes32 proposalId = generateProposalId(_to, _value, _func, _data, _description);
+
+        require(proposals[proposalId].votingStarts == 0, "Proposal already exists");
 
         proposals[proposalId] = Proposal({
             votingStarts: block.timestamp,
@@ -57,4 +68,61 @@ contract Governance {
     ) internal pure returns (bytes32) {
        return keccak256(abi.encode(_to,_value,_func,_data,_description));
     }
+
+    function vote(bytes32 proposalId, uint8 voteType) external {
+        uint votingPower = token.balanceOf(msg.sender);
+
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.votingEnds < block.timestamp, "Votes are no longer accepted");
+        
+        ProposalVote storage proposalVote = proposalVotes[proposalId];
+
+        if (voteType == 0) {
+            proposalVote.againstVotes += votingPower;
+        } else if (voteType == 1) {
+            proposalVote.forVotes += votingPower;
+        } else if (voteType == 2) {
+            proposalVote.abstainVotes += votingPower;
+        }
+
+        proposalVote.hasVoted[msg.sender] = true;
+    }
+
+    function getProposalState(bytes32 proposalId) public view returns (ProposalState) {
+        Proposal storage proposal = proposals[proposalId];
+        ProposalVote storage proposalVote = proposalVotes[proposalId];
+
+        require(proposals[proposalId].votingStarts > 0, "Proposal does not exist");
+
+        if (proposal.executed) {
+            return ProposalState.Executed;
+        }
+
+        if (proposal.votingEnds > block.timestamp) {
+            return ProposalState.Active;
+        }
+
+        if (block.timestamp < proposal.votingStarts) {
+            return ProposalState.Pending;
+        }
+
+        if (proposal.votingEnds < block.timestamp) {
+            if (proposalVote.forVotes > proposalVote.againstVotes) {
+                if (isSuccessByQuorum(proposalVote.forVotes, proposalVote.againstVotes, proposalVote.abstainVotes)) {
+                    return ProposalState.Succeeded;
+                }
+            } else {
+                return ProposalState.Defeated;
+            }
+        }
+    }
+
+    function isSuccessByQuorum(uint forVotes, uint againstVotes, uint abstainVotes) private pure returns (bool) {
+        if (forVotes + abstainVotes > againstVotes) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
 }
