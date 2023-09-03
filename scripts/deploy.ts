@@ -1,29 +1,9 @@
-import { Addressable } from "ethers";
 import { ethers } from "hardhat";
-import { Governance } from "../typechain-types";
-
-async function deployERC20() {
-  const ERC20 = await ethers.deployContract("ERC20", ["Test Token", "TST", 18]);
-
-  await ERC20.waitForDeployment();
-
-  console.log("ERC20 deployed to:", ERC20.target);
-  return ERC20;
-}
-
-async function deployGovernance(erc20Address: string | Addressable) {
-  const Governance = await ethers.deployContract("Governance", [erc20Address]);
-
-  await Governance.waitForDeployment();
-
-  console.log("Governance deployed to:", Governance.target);
-  return Governance;
-}
-
-async function getProposal(Governance: Governance, proposalId: string) {
-  const proposal = await Governance.proposals(proposalId);
-  return proposal;
-}
+import { deployGovernance } from "./02-governance";
+import { deployERC20 } from "./01-token";
+import { deployProposalTarget } from "./03-proposalTarget";
+import { proposeEmpty } from "./governance/proposeEmpty";
+import { mint } from "./erc20/mint";
 
 async function main() {
   const ERC20 = await deployERC20();
@@ -31,25 +11,16 @@ async function main() {
   const signer = signers[0];
   console.log("Signer:", signer.address);
 
-  const mintTx = await ERC20.mint(ethers.parseEther("5000"), signer.address);
-  await mintTx.wait();
+  await mint(ERC20, signer.address);
 
   const balance = await ERC20.balanceOf(signer.address);
-  console.log("Balance:", ethers.formatEther(balance));
+  console.log("Signer ERC20 balance:", ethers.formatEther(balance));
 
   const Governance = await deployGovernance(ERC20.target);
+  const ProposalTarget = await deployProposalTarget();
 
-  const proposalTx = await Governance.propose(
-    signer.address,
-    ethers.parseEther("25"),
-    "Test Proposal",
-    ethers.toUtf8Bytes("test bytes"),
-    "test description"
-  );
-
-  const proposalReceipt = await proposalTx.wait();
-
-  const proposalId = proposalReceipt?.logs[0].topics[2];
+  const proposalId = await proposeEmpty(Governance, ProposalTarget);
+  console.log("Proposal ID:", proposalId);
 }
 
 main().catch((error) => {
