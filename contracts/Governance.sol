@@ -7,7 +7,7 @@ import './IERC20.sol';
 contract Governance {
     IERC20 public token;
 
-    uint public constant PROPOSAL_MIN_DURATION = 60;
+    uint public constant PROPOSAL_MIN_DURATION = 60 seconds;
 
     constructor(IERC20 _token) {
         token = _token;
