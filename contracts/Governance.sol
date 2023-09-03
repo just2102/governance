@@ -91,7 +91,7 @@ contract Governance {
         proposalVote.hasVoted[msg.sender] = true;
     }
 
-    function getProposalState(bytes32 proposalId) public view returns (ProposalState) {
+    function getProposalState(bytes32 proposalId) public view returns (ProposalState proposalState) {
         Proposal storage proposal = proposals[proposalId];
         ProposalVote storage proposalVote = proposalVotes[proposalId];
 
@@ -111,7 +111,7 @@ contract Governance {
 
         if (proposal.votingEnds < block.timestamp) {
             if (proposalVote.forVotes > proposalVote.againstVotes) {
-                if (isSuccessByQuorum(proposalVote.forVotes, proposalVote.againstVotes, proposalVote.abstainVotes)) {
+                if (isSuccessByQuorum(proposalVote.forVotes, proposalVote.againstVotes)) {
                     return ProposalState.Succeeded;
                 }
             } else {
@@ -120,7 +120,7 @@ contract Governance {
         }
     }
 
-    function isSuccessByQuorum(uint forVotes, uint againstVotes, uint abstainVotes) private pure returns (bool) {
+    function isSuccessByQuorum(uint forVotes, uint againstVotes) private pure returns (bool) {
         uint totalValidVotes = forVotes + againstVotes;
         if (totalValidVotes == 0) return false;
 
