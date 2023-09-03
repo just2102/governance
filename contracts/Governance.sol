@@ -7,7 +7,7 @@ import './IERC20.sol';
 contract Governance {
     IERC20 public token;
 
-    uint public constant PROPOSAL_MIN_DURATION = 60 seconds;
+    uint public constant PROPOSAL_MIN_DURATION = 10 minutes;
 
     constructor(IERC20 _token) {
         token = _token;
@@ -153,7 +153,7 @@ contract Governance {
             data = _data;
         }
 
-        (bool success, bytes memory response) = _to.call{value: _value}(_data);
+        (bool success, bytes memory response) = _to.call{value: _value}(data);
         require(success, "tx failed");
 
         return response;
