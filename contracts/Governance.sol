@@ -158,4 +158,6 @@ contract Governance {
 
         return response;
     }
+
+    receive() payable external {}
 }
