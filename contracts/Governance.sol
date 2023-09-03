@@ -44,7 +44,7 @@ contract Governance {
         string calldata _func,
         bytes calldata _data,
         string calldata _description
-    ) external {
+    ) external returns (bytes32) {
         require(token.balanceOf(msg.sender) > 0, "You must have tokens to propose");
 
         bytes32 proposalId = generateProposalId(_to, _value, _func, _data, _description);
@@ -57,6 +57,7 @@ contract Governance {
             executed: false
         });
         emit Proposed(msg.sender, proposalId);
+        return proposalId;
     }
 
     function generateProposalId (
@@ -70,7 +71,9 @@ contract Governance {
     }
 
     function vote(bytes32 proposalId, uint8 voteType) external {
+        require(getProposalState(proposalId) == ProposalState.Active, "Invalid proposal state");
         uint votingPower = token.balanceOf(msg.sender);
+        require(votingPower > 0, "You must have tokens to vote");
 
         Proposal storage proposal = proposals[proposalId];
         require(proposal.votingEnds < block.timestamp, "Votes are no longer accepted");
@@ -126,4 +129,33 @@ contract Governance {
         return forVotePercentage > 70;
     }
 
+    function executeProposal(
+        address _to,
+        uint _value,
+        string calldata _func,
+        bytes calldata _data,
+        string calldata _description
+    ) external returns (bytes memory) {
+        bytes32 proposalId = generateProposalId(_to, _value, _func, _data, _description);
+        
+        require(getProposalState(proposalId) == ProposalState.Succeeded, "Proposal must be in succeeded state");
+        
+        Proposal storage proposal = proposals[proposalId];
+
+        proposal.executed = true;
+
+        bytes memory data;
+        if (bytes(_func).length > 0) {
+            data = abi.encodePacked(
+                bytes4(keccak256(bytes(_func))), _data
+            );
+        } else {
+            data = _data;
+        }
+
+        (bool success, bytes memory response) = _to.call{value: _value}(_data);
+        require(success, "tx failed");
+
+        return response;
+    }
 }
