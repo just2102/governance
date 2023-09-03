@@ -15,6 +15,10 @@ export async function proposeEmpty(
 
   const proposalReceipt = await proposalTx.wait();
 
-  const proposalId = proposalReceipt?.logs[0].topics[2];
-  return proposalId;
+  const emptyProposalId = proposalReceipt?.logs[0].topics[2];
+  console.log("Empty proposal ID:", emptyProposalId);
+
+  const emptyProposal = await Governance.proposals(emptyProposalId!);
+  console.log("Empty proposal", emptyProposal);
+  return emptyProposalId;
 }
