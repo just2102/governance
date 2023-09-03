@@ -76,7 +76,7 @@ contract Governance {
         require(votingPower > 0, "You must have tokens to vote");
 
         Proposal storage proposal = proposals[proposalId];
-        require(proposal.votingEnds < block.timestamp, "Votes are no longer accepted");
+        require(proposal.votingEnds > block.timestamp, "Votes are no longer accepted");
         
         ProposalVote storage proposalVote = proposalVotes[proposalId];
 
